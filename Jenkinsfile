@@ -18,7 +18,8 @@ pipeline {
                         extensions: [], 
                         userRemoteConfigs: [[
                             credentialsId: 'github-token', 
-                            url: 'https://github.com/ridabayi/Medical-RAG-Chatbot.git']])
+                            url: 'https://github.com/ridabayi/Medical-RAG-Chatbot.git'
+                            ]])
             }
         }
 
