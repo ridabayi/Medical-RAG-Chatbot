@@ -7,6 +7,20 @@ pipeline {
                SERVICE_NAME = 'llmops-medical-service'
                }
 
+  stages {
+    stage('Clone') {
+      steps {
+        checkout([$class: 'GitSCM',
+          branches: [[name: '*/main']],
+          userRemoteConfigs: [[
+            url: 'https://github.com/ridabayi/Medical-RAG-Chatbot.git',
+            credentialsId: 'github-token'
+          ]],
+          extensions: [[$class: 'LocalBranch', localBranch: '**']]])
+      }
+    }
+  }
+
   stage('Build, Scan, and Push Docker Image to ECR') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-token']]) {
@@ -29,18 +43,4 @@ pipeline {
             }
         }
 
-  stages {
-    stage('Clone') {
-      steps {
-        checkout([$class: 'GitSCM',
-          branches: [[name: '*/main']],
-          userRemoteConfigs: [[
-            url: 'https://github.com/ridabayi/Medical-RAG-Chatbot.git',
-            credentialsId: 'github-token'
-          ]],
-          extensions: [[$class: 'LocalBranch', localBranch: '**']]
-        ])
-      }
-    }
-  }
 }
