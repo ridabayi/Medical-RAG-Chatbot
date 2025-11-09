@@ -1,53 +1,39 @@
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify
 from app.components.retriever import create_qa_chain
-from dotenv import load_dotenv
 import os
-from markupsafe import Markup
-
-load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
 
-def nl2br(value):
-    return Markup(value.replace('\n', '<br>\n'))
+UPLOAD_FOLDER = "uploaded_docs"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-app.jinja_env.filters['nl2br'] = nl2br
-
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
 def index():
-    if "messages" not in session:
-        session["messages"] = []
+    return render_template('index.html')
 
-    if request.method == "POST":
-        user_input = request.form.get("prompt")
+@app.route('/ask', methods=['POST'])
+def ask():
+    data = request.get_json()
+    question = data.get('prompt', '')
+    if not question:
+        return jsonify({'answer': "❗Veuillez poser une question."})
 
-        if user_input:
-            messages = session["messages"]
-            messages.append({"role": "user", "content": user_input})
-            session["messages"] = messages
+    qa_chain = create_qa_chain()
+    try:
+        response = qa_chain.invoke(question)
+        if isinstance(response, dict):
+            response = response.get("result") or response.get("answer") or str(response)
+        return jsonify({'answer': response})
+    except Exception as e:
+        return jsonify({'answer': f"⚠️ Erreur : {str(e)}"})
 
-            qa_chain = create_qa_chain()
-            if qa_chain is None:
-                error_msg = "❌ QA chain not initialized. Check retriever or LLM setup."
-                return render_template("index.html", messages=messages, error=error_msg)
+@app.route('/upload', methods=['POST'])
+def upload():
+    files = request.files.getlist("files")
+    for file in files:
+        file.save(os.path.join(UPLOAD_FOLDER, file.filename))
+    return jsonify({"message": f"{len(files)} fichier(s) chargé(s)."})
 
-            try:
-                response = qa_chain.invoke(user_input)
-                messages.append({"role": "assistant", "content": response})
-                session["messages"] = messages
-            except Exception as e:
-                error_msg = f"Error: {str(e)}"
-                return render_template("index.html", messages=messages, error=error_msg)
 
-        return redirect(url_for("index"))
-
-    return render_template("index.html", messages=session.get("messages", []))
-
-@app.route("/clear")
-def clear():
-    session.pop("messages", None)
-    return redirect(url_for("index"))
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
+if __name__ == '__main__':
+    app.run(debug=True)
