@@ -1,4 +1,5 @@
-# MEDICAL RAG CHATBOT
+# Summarize-Private-Documents
+
 
 ## Clone the Project
 
